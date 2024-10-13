@@ -32,7 +32,7 @@ Welcome to GoSF, a helper website designed to convert your CSS into Go styling f
 
 ### Go Output
 ```go
-ffunc ButtonStyle(e *ui.Element) *ui.Element {
+func ButtonStyle(e *ui.Element) *ui.Element {
 	e = doc.CSS.Container.Style.BackgroundColor.Value("#4CAF50")(e)
 	e = doc.CSS.Container.Style.Color.White(e)
 	e = doc.CSS.Container.Style.Padding.Value("15px 32px")(e)
