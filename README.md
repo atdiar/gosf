@@ -10,7 +10,7 @@ Welcome to GoSF, a helper website designed to convert your CSS into Go styling f
 
 ## Getting Started
 
-1. **Visit the Website**: Go to [GoSF](#) to start converting your CSS.
+1. **Visit the Website**: Go to [GoSF](https://zui.dev/gosf) to start converting your CSS.
 2. **Input CSS**: Paste your CSS code into the input field.
 3. **Generate Go Functions**: Click the convert button to generate Go styling functions.
 4. **Copy and Use**: Copy the generated code and use it in your zui projects.
@@ -46,7 +46,7 @@ func ButtonStyle(e *ui.Element) *ui.Element {
 
 ## License
 
-(This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.)
+(GoSF is licensed under the MIT License unlike zui which is source available. See the [LICENSE](LICENSE) file for details.)
 
 ## Contact
 
