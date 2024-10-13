@@ -5,25 +5,93 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CSS to Go Converter</title>
     <style>
-       html, body {
-          height: 100%;
-          margin: 0;
-          padding: 0;
-          overflow:hidden;
-      }
+        :root {
+            --fsize--4: clamp(0.6028rem, 0.5276rem + 0.3763vw, 0.8192rem);
+            --fsize--3: clamp(0.7234rem, 0.6188rem + 0.5228vw, 1.024rem);
+            --fsize--2: clamp(0.8681rem, 0.7248rem + 0.7164vw, 1.28rem);
+            --fsize--1: clamp(1.0417rem, 0.8475rem + 0.971vw, 1.6rem);
+            --fsize-0: clamp(1.25rem, 0.9891rem + 1.3043vw, 2rem);
+            --fsize-1: clamp(1.5rem, 1.1522rem + 1.7391vw, 2.5rem);
+            --fsize-2: clamp(1.8rem, 1.3391rem + 2.3043vw, 3.125rem);
+            --fsize-3: clamp(2.16rem, 1.5526rem + 3.037vw, 3.9063rem);
+            --fsize-4: clamp(2.592rem, 1.7952rem + 3.984vw, 4.8828rem);
+            --fsize-5: clamp(3.1104rem, 2.0693rem + 5.2054vw, 6.1035rem);
+            --fsize-6: clamp(3.7325rem, 2.377rem + 6.7772vw, 7.6294rem);
+        }
 
-      body {
-          font-family: Arial, sans-serif;
-          height: 100vh;
-          box-sizing: border-box;
-          line-height: 1.6;
-          display: flex;
-          flex-direction: column;
-          max-width: 100vw;
-          margin: 0 auto;
-          justify-content: center;
-          align-items: center;
-      }
+        @font-face {
+            font-family: 'AfrobeatNova';
+            src: url('./AfrobeatNova-Regular.woff2') format('woff2');
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow:hidden;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            height: 100vh;
+            box-sizing: border-box;
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+            max-width: 100vw;
+            margin: 0 auto;
+            justify-content: center;
+            align-items: center;
+        }
+
+      .logo-container {
+            align-self: center;
+            padding-top:1.4rem;
+        }
+
+        .logo {
+            font-size: var(--fsize-6);
+            font-family: "AfrobeatNova", sans-serif;
+            font-weight: normal;
+            color: rgb(0, 0, 0);
+            mix-blend-mode: normal;
+            cursor: pointer;
+            letter-spacing: -0.06rem;
+            line-height: 1; /* Maintain adjusted line height */
+            display: inline-block; /* Change to inline-block */
+        }
+
+        .logo a {
+            color: inherit;
+            text-decoration: none;
+            display: inline-block; /* Change to inline-block */
+        }
+
+        .version {
+            display: inline-block;
+            display:none;
+            color: #39FF14;
+            font-size: 0.6rem;
+            font-family: 'Courier New', Courier, monospace;
+            text-shadow: 0 0 5px #39FF14, 0 0 10px #39FF14;
+            background-color: rgba(0, 0, 0, 0.3);
+            animation: blink 1.5s infinite;
+            border: 1px solid rgba(57, 255, 20, 0.5);
+            border-radius: 50px;
+            position: absolute;
+            bottom: -0.5rem; /* Adjust to position below the logo */
+            right: 0;
+            padding: 0.1rem 0.3rem;
+            white-space: nowrap; /* Prevent wrapping */
+        }
+
+        /* Add a wrapper for precise positioning if needed */
+        .logo-wrapper {
+            position: relative;
+            display: inline-block;
+        }
 
       .main-content {
           flex: 1 1 auto;
@@ -119,7 +187,6 @@
           overflow: hidden;
           display: flex;
           flex-direction: column;
-          max-height:50vh;
       }
 
       #goOutput {
@@ -211,8 +278,16 @@
     </style>
 </head>
 <body>
+    <div class="logo-container">
+        <div class="logo-wrapper">
+            <div class="logo">
+                <a href="https://zui.dev" target="_blank">zui</a>
+            </div>
+            <sub><pre class="version">v0.1</pre></sub>
+        </div>
+    </div>
     <div class="main-content">
-        <h1>CSS to GOSF Converter - Go S(tyling) F(unctions) - for Zui</h1>
+        <h1>CSS to GOSF Converter - Go S(tyling) F(unctions)</h1>
         <div class="code-container">
             <div class="code-block">
                 <div class="code-header">
@@ -1178,8 +1253,14 @@
             const styleMap = new Map();
             const ruleOrder = [];
             const mediaQueries = [];
+            const rawVariables = [];
 
             function addToStyleMap(selector, declarations, ruleType = 'standard', parentRule = null) {
+                if (selector === ':root' || declarations.some(decl => decl.property.startsWith('--'))) {
+                    rawVariables.push({ selector, declarations });
+                    return;
+                }
+
                 const baseSelector = selector.split(':')[0];
                 const ruleId = `${ruleType}:${baseSelector}`;
                 if (!styleMap.has(ruleId)) {
@@ -1214,6 +1295,17 @@
 
             processRules(ast.stylesheet.rules);
 
+            // Process raw variables first
+            rawVariables.forEach((rule, index) => {
+                const varName = `RawCSS${rule.selector.replace(/[^a-zA-Z0-9]/g, '')}${index}`;
+                output += `var ${varName} = \`${rule.selector} {\n`;
+                rule.declarations.forEach(decl => {
+                    output += `\t${decl.property}: ${decl.value};\n`;
+                });
+                output += '}\`\n\n';
+            });
+
+            // Process regular styles
             ruleOrder.forEach(ruleId => {
                 const [ruleType, selector] = ruleId.split(':');
                 const { base, pseudo, type, parentRule } = styleMap.get(ruleId);
@@ -1268,7 +1360,6 @@
                 const varName = `RawCSSMediaQuery${index + 1}`;
                 output += `var ${varName} = \`${beautifyCSS(query)}\`\n\n`;
             });
-
             function handleDeclaration(decl, pseudoSelector = '') {
                 const property = propertyToGoMethod(decl.property);
                 let value = decl.value;
