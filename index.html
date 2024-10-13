@@ -1,0 +1,2353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSS to Go Converter</title>
+    <style>
+       html, body {
+          height: 100%;
+          margin: 0;
+          padding: 0;
+          overflow:hidden;
+      }
+
+      body {
+          font-family: Arial, sans-serif;
+          height: 100vh;
+          box-sizing: border-box;
+          line-height: 1.6;
+          display: flex;
+          flex-direction: column;
+          max-width: 100vw;
+          margin: 0 auto;
+          justify-content: center;
+          align-items: center;
+      }
+
+      .main-content {
+          flex: 1 1 auto;
+          display: flex;
+          flex-direction: column;
+      }
+
+      .code-container {
+          display: flex;
+          gap: 20px;
+          flex-wrap: wrap;
+          flex: 0; /* Take up remaining space */
+      }
+
+      .code-block {
+          flex: 1 1;
+          min-width: 400px;
+          max-width: 100%;
+          display: flex;
+          flex-direction: column;
+      }
+
+      .code-block:last-child {
+          flex: 1.5 1; /* Make the Go output wider by default */
+      }
+
+      .code-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 5px;
+      }
+
+      .css-area, .go-area {
+          position: relative;
+          flex: 1; /* Take up remaining space in code block */
+          border: 1px solid #ddd;
+          border-radius: 4px;
+          overflow: hidden;
+          min-height: 200px; /* Set a minimum height */
+          max-height: 480px;
+      }
+
+      .css-wrapper {
+          position: relative;
+          height: 100%;
+          overflow: hidden;
+      }
+
+      #cssInput, #cssHighlight {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          margin: 0;
+          padding: 10px;
+          padding-left: 50px;
+          font-family: monospace;
+          font-size: 14px;
+          line-height: 1.5;
+          border: none;
+          white-space: pre;
+          word-wrap: break-word;
+          box-sizing: border-box;
+          overflow: hidden;
+          width: 100%;
+          height: 100%;
+          tab-size: 4;
+          -moz-tab-size: 4;
+      }
+
+      #cssInput {
+          background: transparent;
+          color: black;
+          caret-color: black;
+          z-index: 1;
+          resize: none;
+      }
+
+      #cssInput:hover {
+          overflow: auto;
+      }
+
+      #cssHighlight {
+          z-index: 0;
+          pointer-events: none;
+          color: transparent;
+          background-color: transparent;
+      }
+
+      .go-area {
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+          max-height:50vh;
+      }
+
+      #goOutput {
+          flex-grow: 1;
+          overflow-y: auto;
+          overflow-x:hidden;
+          margin: 0;
+          padding: 10px;
+          padding-left: 50px;
+          font-family: monospace;
+          font-size: 14px;
+          line-height: 1.5;
+          border: none;
+          scrollbar-gutter:stable;
+      }
+
+      #goOutput:hover{
+          overflow-x:auto;
+      }
+
+      .line-numbers {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 40px;
+          height: 100%;
+          padding: 10px 5px;
+          background-color: #f0f0f0;
+          border-right: 1px solid #ccc;
+          text-align: right;
+          font-family: monospace;
+          font-size: 14px;
+          line-height: 1.5;
+          color: #999;
+          user-select: none;
+          overflow: hidden;
+          pointer-events: none;
+          z-index: 2;
+          box-sizing: border-box;
+      }
+
+      #cssInput:focus {
+          outline: none;
+      }
+
+      .loc-counter {
+          font-size: 14px;
+          color: #666;
+          margin-right: 10px;
+      }
+
+      .copy-button {
+          padding: 5px 10px;
+          background-color: #0091ffd3;
+          color: white;
+          border: none;
+          border-radius: 3px;
+          cursor: pointer;
+      }
+
+      #errorMessages {
+          margin-top: 10px;
+          padding: 10px;
+          background-color: #fff0f0;
+          overflow-y: auto;
+          flex:1 1;
+      }
+
+      footer {
+          flex: 0 0 32px;
+          text-align: center;
+          padding: 10px 0;
+          background-color: #f8f9fa;
+          border-top: 1px solid #e9ecef;
+          margin-top: 20px;
+          color: black;
+          font-size: 12px;
+      }
+
+      footer a {
+          color: #007bff;
+          text-decoration: none;
+          font-style: normal;
+      }
+
+      footer a:hover {
+          text-decoration: underline;
+      }
+    </style>
+</head>
+<body>
+    <div class="main-content">
+        <h1>CSS to GOSF Converter - Go S(tyling) F(unctions) - for Zui</h1>
+        <div class="code-container">
+            <div class="code-block">
+                <div class="code-header">
+                    <h2>CSS Input</h2>
+
+                </div>
+                <div class="loc-counter" id="cssLOC"></div>
+                <div class="css-area">
+                    <div class="line-numbers" id="cssLineNumbers"></div>
+                    <div class="css-wrapper">
+                        <textarea id="cssInput" spellcheck="false"></textarea>
+                        <div id="cssHighlight"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="code-block">
+                <div class="code-header">
+                    <h2>Go Output</h2>
+                    <button class="copy-button" id="copyButton">Copy</button>
+                </div>
+                <div class="loc-counter" id="goLOC"></div>
+                <div class="go-area">
+                    <div class="line-numbers" id="goLineNumbers"></div>
+                    <pre id="goOutput"></pre>
+                </div>
+            </div>
+        </div>
+        <div id="errorMessages" class="error-messages"></div>
+    </div>
+    <footer>
+        Designed for <a href="https://zui.dev" target="_blank" rel="noopener noreferrer">Zui</a>
+    </footer>
+
+    <script>
+        const cssInput = document.getElementById('cssInput');
+        const cssHighlight = document.getElementById('cssHighlight');
+        const goOutput = document.getElementById('goOutput');
+        const copyButton = document.getElementById('copyButton');
+        const cssLineNumbers = document.getElementById('cssLineNumbers');
+        const goLineNumbers = document.getElementById('goLineNumbers');
+        const cssLOC = document.getElementById('cssLOC');
+        const goLOC = document.getElementById('goLOC');
+        const errorMessagesElement = document.getElementById('errorMessages');
+        const goArea = document.querySelector('.go-area');
+
+        const cssToGoMapping = {
+            // Container Layout properties
+            "box-shadow": {
+                id: "Container.Layout.BoxShadow",
+                values: ["none"],
+            },
+            "justify-content": {
+                id: "Container.Layout.JustifyContent",
+                values: ["flex-start", "flex-end", "center", "space-between", "space-around", "space-evenly"],
+            },
+            "justify-self": {
+                id: "Container.Layout.JustifySelf",
+                values: ["auto", "stretch", "center", "flex-start", "flex-end", "baseline", "end", "start", "left", "right", "safe", "unsafe", "anchor center","first baseline", "last baseline"], // todo: add more values
+            },
+            "z-index": {
+                id: "Container.Layout.ZIndex",
+                values: ["auto"],
+            },
+            "float": {
+                id: "Container.Layout.Float",
+                values: ["none", "left", "right"],
+            },
+            "overflow": {
+                id: "Container.Layout.Overflow",
+                values: ["visible", "hidden", "scroll", "auto"],
+            },
+            "overflow-y": {
+                id: "Container.Layout.OverflowY",
+                values: ["visible", "hidden", "scroll", "auto"],
+            },
+            "perspective": {
+                id: "Container.Layout.Perspective",
+                values: ["none"],
+            },
+            "border-collapse": {
+                id: "Container.Layout.BorderCollapse",
+                values: ["separate", "collapse"],
+            },
+            "page-break-before": {
+                id: "Container.Layout.PageBreakBefore",
+                values: ["auto", "always", "avoid", "left", "right"],
+            },
+            "columns": {
+                id: "Container.Layout.Columns",
+                values: ["auto"],
+            },
+            "column-count": {
+                id: "Container.Layout.ColumnCount",
+                values: ["auto"],
+            },
+            "min-height": {
+                id: "Container.Layout.MinHeight",
+                values: [],
+            },
+            "page-break-inside": {
+                id: "Container.Layout.PageBreakInside",
+                values: ["auto", "avoid"],
+            },
+            "column-gap": {
+                id: "Container.Layout.ColumnGap",
+                values: ["normal"],
+            },
+            "clip": {
+                id: "Container.Layout.Clip",
+                values: ["auto"],
+            },
+            "flex-direction": {
+                id: "Container.Layout.FlexDirection",
+                values: ["row", "row-reverse", "column", "column-reverse"],
+            },
+            "page-break-after": {
+                id: "Container.Layout.PageBreakAfter",
+                values: ["auto", "always", "avoid", "left", "right"],
+            },
+            "top": {
+                id: "Container.Layout.Top",
+                values: ["auto"],
+            },
+            "counter-increment": {
+                id: "Container.Layout.CounterIncrement",
+                values: ["none"],
+            },
+            "height": {
+                id: "Container.Layout.Height",
+                values: ["auto"],
+            },
+            "transform-style": {
+                id: "Container.Layout.TransformStyle",
+                values: ["flat", "preserve-3d"],
+            },
+            "overflow-x": {
+                id: "Container.Layout.OverflowX",
+                values: ["visible", "hidden", "scroll", "auto"],
+            },
+            "flex-wrap": {
+                id: "Container.Layout.FlexWrap",
+                values: ["nowrap", "wrap", "wrap-reverse"],
+            },
+            "max-width": {
+                id: "Container.Layout.MaxWidth",
+                values: ["none"],
+            },
+            "bottom": {
+                id: "Container.Layout.Bottom",
+                values: ["auto"],
+            },
+            "counter-reset": {
+                id: "Container.Layout.CounterReset",
+                values: ["none"],
+            },
+            "right": {
+                id: "Container.Layout.Right",
+                values: ["auto"],
+            },
+            "box-sizing": {
+                id: "Container.Layout.BoxSizing",
+                values: ["content-box", "border-box"],
+            },
+            "position": {
+                id: "Container.Layout.Position",
+                values: ["static", "absolute", "fixed", "relative", "sticky"],
+            },
+            "table-layout": {
+                id: "Container.Layout.TableLayout",
+                values: ["auto", "fixed"],
+            },
+            "width": {
+                id: "Container.Layout.Width",
+                values: ["auto"],
+            },
+            "max-height": {
+                id: "Container.Layout.MaxHeight",
+                values: ["none"],
+            },
+            "column-width": {
+                id: "Container.Layout.ColumnWidth",
+                values: ["auto"],
+            },
+            "min-width": {
+                id: "Container.Layout.MinWidth",
+                values: [],
+            },
+            "vertical-align": {
+                id: "Container.Layout.VerticalAlign",
+                values: ["baseline", "top", "text-top", "middle", "bottom", "text-bottom"],
+            },
+            "perspective-origin": {
+                id: "Container.Layout.PerspectiveOrigin",
+                values: [],
+            },
+            "align-content": {
+                id: "Container.Layout.AlignContent",
+                values: ["stretch", "center", "flex-start", "flex-end", "space-between", "space-around"],
+            },
+            "flex-flow": {
+                id: "Container.Layout.FlexFlow",
+                values: [],
+            },
+            "display": {
+                id: "Container.Layout.Display",
+                values: ["inline", "block", "contents", "flex", "grid", "none"],
+            },
+            "left": {
+                id: "Container.Layout.Left",
+                values: ["auto"],
+            },
+            "grid-template-columns": {
+                id: "Container.Layout.GridTemplateColumns",
+                values: [],
+            },
+            "grid-template-rows": {
+                id: "Container.Layout.GridTemplateRows",
+                values: [],
+            },
+            "grid-column": {
+                id: "Container.Layout.GridColumn",
+                values: [],
+            },
+            "grid-row": {
+                id: "Container.Layout.GridRow",
+                values: [],
+            },
+            "gap": {
+                id: "Container.Layout.Gap",
+                values: [],
+            },
+            "scroll-behavior": {
+                id: "Container.Layout.ScrollBehavior",
+                values: ["auto", "smooth"],
+            },
+
+            // Container Style properties
+            "background-image": {
+                id: "Container.Style.BackgroundImage",
+                values: ["none"],
+            },
+            "border-left-style": {
+                id: "Container.Style.BorderLeftStyle",
+                values: ["none", "hidden", "dotted", "dashed", "solid", "double", "groove", "ridge", "inset", "outset"],
+            },
+            "transition-delay": {
+                id: "Container.Style.TransitionDelay",
+                values: [],
+            },
+            "animation-duration": {
+                id: "Container.Style.AnimationDuration",
+                values: [],
+            },
+            "list-style": {
+                id: "Container.Style.ListStyle",
+                values: [],
+            },
+            "outline-width": {
+                id: "Container.Style.OutlineWidth",
+                values: ["medium", "thin", "thick"],
+            },
+            "border-top-left-radius": {
+                id: "Container.Style.BorderTopLeftRadius",
+                values: [],
+            },
+            "white-space": {
+                id: "Container.Style.WhiteSpace",
+                values: ["normal", "nowrap", "pre", "pre-line", "pre-wrap"],
+            },
+            "border-right": {
+                id: "Container.Style.BorderRight",
+                values: [],
+            },
+            "text-decoration-line": {
+                id: "Container.Style.TextDecorationLine",
+                values: ["none", "underline", "overline", "line-through"],
+            },
+            "animation-delay": {
+                id: "Container.Style.AnimationDelay",
+                values: [],
+            },
+            "background-position": {
+                id: "Container.Style.BackgroundPosition",
+                values: ["left top", "left center", "left bottom", "right top", "right center", "right bottom", "center top", "center center", "center bottom"],
+            },
+            "border-image": {
+                id: "Container.Style.BorderImage",
+                values: [],
+            },
+            "border-spacing": {
+                id: "Container.Style.BorderSpacing",
+                values: [],
+            },
+            "border-image-outset": {
+                id: "Container.Style.BorderImageOutset",
+                values: [],
+            },
+            "border-image-slice": {
+                id: "Container.Style.BorderImageSlice",
+                values: [],
+            },
+            "border-left-color": {
+                id: "Container.Style.BorderLeftColor",
+                values: ["transparent"],
+            },
+            "font-size": {
+                id: "Container.Style.FontSize",
+                values: ["medium", "xx-small", "x-small", "small", "large", "x-large", "xx-large", "smaller", "larger"],
+            },
+            "line-height": {
+                id: "Container.Style.LineHeight",
+                values: ["normal"],
+            },
+            "text-decoration-style": {
+                id: "Container.Style.TextDecorationStyle",
+                values: ["solid", "double", "dotted", "dashed", "wavy"],
+            },
+            "backface-visibility": {
+                id: "Container.Style.BackfaceVisibility",
+                values: ["visible", "hidden"],
+            },
+            "border-right-style": {
+                id: "Container.Style.BorderRightStyle",
+                values: ["none", "hidden", "dotted", "dashed", "solid", "double", "groove", "ridge", "inset", "outset"],
+            },
+            "text-decoration": {
+                id: "Container.Style.TextDecoration",
+                values: [],
+            },
+            "transition": {
+                id: "Container.Style.Transition",
+                values: [],
+            },
+            "animation-iteration-count": {
+                id: "Container.Style.AnimationIterationCount",
+                values: ["infinite"],
+            },
+            "border-bottom": {
+                id: "Container.Style.BorderBottom",
+                values: [],
+            },
+            "animation-timing-function": {
+                id: "Container.Style.AnimationTimingFunction",
+                values: [],
+            },
+            "border-radius": {
+                id: "Container.Style.BorderRadius",
+                values: [],
+            },
+            "quotes": {
+                id: "Container.Style.Quotes",
+                values: ["none", "auto"],
+            },
+            "tab-size": {
+                id: "Container.Style.TabSize",
+                values: [],
+            },
+            "animation-fill-mode": {
+                id: "Container.Style.AnimationFillMode",
+                values: ["none", "forwards", "backwards", "both"],
+            },
+            "background-size": {
+                id: "Container.Style.BackgroundSize",
+                values: ["auto", "cover", "contain"],
+            },
+            "font-size-adjust": {
+                id: "Container.Style.FontSizeAdjust",
+                values: ["none"],
+            },
+            "list-style-position": {
+                id: "Container.Style.ListStylePosition",
+                values: ["inside", "outside"],
+            },
+            "text-align": {
+                id: "Container.Style.TextAlign",
+                values: ["left", "right", "center", "justify"],
+            },
+            "text-justify": {
+                id: "Container.Style.TextJustify",
+                values: ["auto", "inter-word", "inter-character", "none"],
+            },
+            "background-attachment": {
+                id: "Container.Style.BackgroundAttachment",
+                values: ["scroll", "fixed", "local"],
+            },
+            "border-right-width": {
+                id: "Container.Style.BorderRightWidth",
+                values: ["medium", "thin", "thick"],
+            },
+            "font": {
+                id: "Container.Style.Font",
+                values: [],
+            },
+            "border-left": {
+                id: "Container.Style.BorderLeft",
+                values: [],
+            },
+            "transition-duration": {
+                id: "Container.Style.TransitionDuration",
+                values: [],
+            },
+            "word-spacing": {
+                id: "Container.Style.WordSpacing",
+                values: ["normal"],
+            },
+            "animation-name": {
+                id: "Container.Style.AnimationName",
+                values: ["none"],
+            },
+            "animation-play-state": {
+                id: "Container.Style.AnimationPlayState",
+                values: ["paused", "running"],
+            },
+            "letter-spacing": {
+                id: "Container.Style.LetterSpacing",
+                values: ["normal"],
+            },
+            "border-bottom-style": {
+                id: "Container.Style.BorderBottomStyle",
+                values: ["none", "hidden", "dotted", "dashed", "solid", "double", "groove", "ridge", "inset", "outset"],
+            },
+            "word-break": {
+                id: "Container.Style.WordBreak",
+                values: ["normal", "break-all", "keep-all", "break-word"],
+            },
+            "border-bottom-right-radius": {
+                id: "Container.Style.BorderBottomRightRadius",
+                values: [],
+            },
+            "font-style": {
+                id: "Container.Style.FontStyle",
+                values: ["normal", "italic", "oblique"],
+            },
+            "order": {
+                id: "Container.Style.Order",
+                values: [],
+            },
+            "outline-style": {
+                id: "Container.Style.OutlineStyle",
+                values: ["none", "hidden", "dotted", "dashed", "solid", "double", "groove", "ridge", "inset", "outset"],
+            },
+            "border-bottom-left-radius": {
+                id: "Container.Style.BorderBottomLeftRadius",
+                values: [],
+            },
+            "border-image-source": {
+                id: "Container.Style.BorderImageSource",
+                values: ["none"],
+            },
+            "text-align-last": {
+                id: "Container.Style.TextAlignLast",
+                values: ["auto", "left", "right", "center", "justify", "start", "end"],
+            },
+            "border-image-width": {
+                id: "Container.Style.BorderImageWidth",
+                values: ["auto"],
+            },
+            "font-weight": {
+                id: "Container.Style.FontWeight",
+                values: ["normal", "bold", "bolder", "lighter", "100", "200", "300", "400", "500", "600", "700", "800", "900"],
+            },
+            "list-style-image": {
+                id: "Container.Style.ListStyleImage",
+                values: ["none"],
+            },
+            "opacity": {
+                id: "Container.Style.Opacity",
+                values: [],
+            },
+            "clear": {
+                id: "Container.Style.Clear",
+                values: ["none", "left", "right", "both"],
+            },
+            "border-top-color": {
+                id: "Container.Style.BorderTopColor",
+                values: ["transparent"],
+            },
+            "border": {
+                id: "Container.Style.Border",
+                values: [],
+            },
+            "border-right-color": {
+                id: "Container.Style.BorderRightColor",
+                values: ["transparent"],
+            },
+            "transition-timing-function": {
+                id: "Container.Style.TransitionTimingFunction",
+                values: [],
+            },
+            "border-bottom-width": {
+                id: "Container.Style.BorderBottomWidth",
+                values: ["medium", "thin", "thick"],
+            },
+            "border-style": {
+                id: "Container.Style.BorderStyle",
+                values: ["none", "hidden", "dotted", "dashed", "solid", "double", "groove", "ridge", "inset", "outset"],
+            },
+            "border-top-right-radius": {
+                id: "Container.Style.BorderTopRightRadius",
+                values: [],
+            },
+            "caption-side": {
+                id: "Container.Style.CaptionSide",
+                values: ["top", "bottom"],
+            },
+            "font-family": {
+                id: "Container.Style.FontFamily",
+                values: [],
+            },
+            "text-decoration-color": {
+                id: "Container.Style.TextDecorationColor",
+                values: [],
+            },
+            "transition-property": {
+                id: "Container.Style.TransitionProperty",
+                values: ["none"],
+            },
+            "background-origin": {
+                id: "Container.Style.BackgroundOrigin",
+                values: ["padding-box", "border-box", "content-box"],
+            },
+            "text-indent": {
+                id: "Container.Style.TextIndent",
+                values: [],
+            },
+            "visibility": {
+                id: "Container.Style.Visibility",
+                values: ["visible", "hidden", "collapse"],
+            },
+            "border-color": {
+                id: "Container.Style.BorderColor",
+                values: ["transparent"],
+            },
+            "border-top": {
+                id: "Container.Style.BorderTop",
+                values: [],
+            },
+            "font-variant": {
+                id: "Container.Style.FontVariant",
+                values: ["normal", "small-caps"],
+            },
+            "outline": {
+                id: "Container.Style.Outline",
+                values: [],
+            },
+            "border-bottom-color": {
+                id: "Container.Style.BorderBottomColor",
+                values: ["transparent"],
+            },
+            "border-top-style": {
+                id: "Container.Style.BorderTopStyle",
+                values: ["none", "hidden", "dotted", "dashed", "solid", "double", "groove", "ridge", "inset", "outset"],
+            },
+            "border-width": {
+                id: "Container.Style.BorderWidth",
+                values: ["medium", "thin", "thick"],
+            },
+            "list-style-type": {
+                id: "Container.Style.ListStyleType",
+                values: ["disc", "armenian", "circle", "cjk-ideographic", "decimal", "decimal-leading-zero", "georgian", "hebrew", "hiragana", "hiragana-iroha", "katakana", "katakana-iroha", "lower-alpha", "lower-greek", "lower-latin", "lower-roman", "none", "square", "upper-alpha", "upper-greek", "upper-latin", "upper-roman"],
+            },
+            "outline-offset": {
+                id: "Container.Style.OutlineOffset",
+                values: [],
+            },
+            "animation": {
+                id: "Container.Style.Animation",
+                values: [],
+            },
+            "background": {
+                id: "Container.Style.Background",
+                values: [],
+            },
+            "background-repeat": {
+                id: "Container.Style.BackgroundRepeat",
+                values: ["repeat", "repeat-x", "repeat-y", "no-repeat", "space", "round"],
+            },
+            "border-top-width": {
+                id: "Container.Style.BorderTopWidth",
+                values: ["medium", "thin", "thick"],
+            },
+            "word-wrap": {
+                id: "Container.Style.WordWrap",
+                values: ["normal", "break-word"],
+            },
+            "background-color": {
+                id: "Container.Style.BackgroundColor",
+                values: ["transparent", "aliceblue", "antiquewhite", "aqua", "aquamarine", "azure",
+                    "beige", "bisque", "black", "blanchedalmond", "blue", "blueviolet", "brown",
+                    "burlywood", "cadetblue", "chartreuse", "chocolate", "coral", "cornflowerblue",
+                    "cornsilk", "crimson", "cyan", "darkblue", "darkcyan", "darkgoldenrod",
+                    "darkgray", "darkgreen", "darkkhaki", "darkmagenta", "darkolivegreen",
+                    "darkorange", "darkorchid", "darkred", "darksalmon", "darkseagreen",
+                    "darkslateblue", "darkslategray", "darkturquoise", "darkviolet", "deeppink",
+                    "deepskyblue", "dimgray", "dodgerblue", "firebrick", "floralwhite",
+                    "forestgreen", "fuchsia", "gainsboro", "ghostwhite", "gold", "goldenrod",
+                    "gray", "green", "greenyellow", "honeydew", "hotpink", "indianred", "indigo",
+                    "ivory", "khaki", "lavender", "lavenderblush", "lawngreen", "lemonchiffon",
+                    "lightblue", "lightcoral", "lightcyan", "lightgoldenrodyellow", "lightgray",
+                    "lightgreen", "lightpink", "lightsalmon", "lightseagreen", "lightskyblue",
+                    "lightslategray", "lightsteelblue", "lightyellow", "lime", "limegreen",
+                    "linen", "magenta", "maroon", "mediumaquamarine", "mediumblue", "mediumorchid",
+                    "mediumpurple", "mediumseagreen", "mediumslateblue", "mediumspringgreen",
+                    "mediumturquoise", "mediumvioletred", "midnightblue", "mintcream", "mistyrose",
+                    "moccasin", "navajowhite", "navy", "oldlace", "olive", "olivedrab", "orange",
+                    "orangered", "orchid", "palegoldenrod", "palegreen", "paleturquoise",
+                    "palevioletred", "papayawhip", "peachpuff", "peru", "pink", "plum", "powderblue",
+                    "purple", "rebeccapurple", "red", "rosybrown", "royalblue", "saddlebrown",
+                    "salmon", "sandybrown", "seagreen", "seashell", "sienna", "silver", "skyblue",
+                    "slateblue", "slategray", "snow", "springgreen", "steelblue", "tan", "teal",
+                    "thistle", "tomato", "turquoise", "violet", "wheat", "white", "whitesmoke",
+                    "yellow", "yellowgreen"],
+            },
+            "text-overflow": {
+                id: "Container.Style.TextOverflow",
+                values: ["clip", "ellipsis"],
+            },
+            "text-shadow": {
+                id: "Container.Style.TextShadow",
+                values: ["none"],
+            },
+            "background-clip": {
+                id: "Container.Style.BackgroundClip",
+                values: ["border-box", "padding-box", "content-box"],
+            },
+            "border-left-width": {
+                id: "Container.Style.BorderLeftWidth",
+                values: ["medium", "thin", "thick"],
+            },
+            "resize": {
+                id: "Container.Style.Resize",
+                values: ["none", "both", "horizontal", "vertical"],
+            },
+            "animation-direction": {
+                id: "Container.Style.AnimationDirection",
+                values: ["normal", "reverse", "alternate", "alternate-reverse"],
+            },
+            "color": {
+                id: "Container.Style.Color",
+                values: ["transparent", "aliceblue", "antiquewhite", "aqua", "aquamarine", "azure",
+                    "beige", "bisque", "black", "blanchedalmond", "blue", "blueviolet", "brown",
+                    "burlywood", "cadetblue", "chartreuse", "chocolate", "coral", "cornflowerblue",
+                    "cornsilk", "crimson", "cyan", "darkblue", "darkcyan", "darkgoldenrod",
+                    "darkgray", "darkgreen", "darkkhaki", "darkmagenta", "darkolivegreen",
+                    "darkorange", "darkorchid", "darkred", "darksalmon", "darkseagreen",
+                    "darkslateblue", "darkslategray", "darkturquoise", "darkviolet", "deeppink",
+                    "deepskyblue", "dimgray", "dodgerblue", "firebrick", "floralwhite",
+                    "forestgreen", "fuchsia", "gainsboro", "ghostwhite", "gold", "goldenrod",
+                    "gray", "green", "greenyellow", "honeydew", "hotpink", "indianred", "indigo",
+                    "ivory", "khaki", "lavender", "lavenderblush", "lawngreen", "lemonchiffon",
+                    "lightblue", "lightcoral", "lightcyan", "lightgoldenrodyellow", "lightgray",
+                    "lightgreen", "lightpink", "lightsalmon", "lightseagreen", "lightskyblue",
+                    "lightslategray", "lightsteelblue", "lightyellow", "lime", "limegreen",
+                    "linen", "magenta", "maroon", "mediumaquamarine", "mediumblue", "mediumorchid",
+                    "mediumpurple", "mediumseagreen", "mediumslateblue", "mediumspringgreen",
+                    "mediumturquoise", "mediumvioletred", "midnightblue", "mintcream", "mistyrose",
+                    "moccasin", "navajowhite", "navy", "oldlace", "olive", "olivedrab", "orange",
+                    "orangered", "orchid", "palegoldenrod", "palegreen", "paleturquoise",
+                    "palevioletred", "papayawhip", "peachpuff", "peru", "pink", "plum", "powderblue",
+                    "purple", "rebeccapurple", "red", "rosybrown", "royalblue", "saddlebrown",
+                    "salmon", "sandybrown", "seagreen", "seashell", "sienna", "silver", "skyblue",
+                    "slateblue", "slategray", "snow", "springgreen", "steelblue", "tan", "teal",
+                    "thistle", "tomato", "turquoise", "violet", "wheat", "white", "whitesmoke",
+                    "yellow", "yellowgreen"],
+            },
+            "outline-color": {
+                id: "Container.Style.OutlineColor",
+                values: ["invert"],
+            },
+            "border-image-repeat": {
+                id: "Container.Style.BorderImageRepeat",
+                values: ["stretch", "repeat", "round", "space"],
+            },
+            "font-stretch": {
+                id: "Container.Style.FontStretch",
+                values: ["ultra-condensed", "extra-condensed", "condensed", "semi-condensed", "normal", "semi-expanded", "expanded", "extra-expanded", "ultra-expanded"],
+            },
+            "text-transform": {
+                id: "Container.Style.TextTransform",
+                values: ["none", "capitalize", "uppercase", "lowercase"],
+            },
+            "transform": {
+                id: "Container.Style.Transform",
+                values: [],
+            },
+            "pointer-events": {
+                id: "Container.Style.PointerEvents",
+                values: ["none", "auto"],
+            },
+            "user-select": {
+                id: "Container.Style.UserSelect",
+                values: ["none", "text", "auto", "all"],
+            },
+            "backdrop-filter": {
+                id: "Container.Style.BackdropFilter",
+                values: [],
+            },
+            "object-fit": {
+                id: "Container.Style.ObjectFit",
+                values: ["fill", "contain", "cover", "none", "scale-down"],
+            },
+            "object-position": {
+                id: "Container.Style.ObjectPosition",
+                values: [],
+            },
+
+            // Content Layout properties
+            "flex-grow": {
+                id: "Content.Layout.FlexGrow",
+                values: [],
+            },
+            "align-self": {
+                id: "Content.Layout.AlignSelf",
+                values: ["auto", "stretch", "center", "flex-start", "flex-end", "baseline"],
+            },
+            "content": {
+                id: "Content.Layout.Content",
+                values: ["normal", "none", "counter", "open-quote", "close-quote", "no-open-quote", "no-close-quote"],
+            },
+            "column-span": {
+                id: "Content.Layout.ColumnSpan",
+                values: ["none", "all"],
+            },
+            "flex": {
+                id: "Content.Layout.Flex",
+                values: ["auto", "initial", "none", "inherit"],
+            },
+            "flex-shrink": {
+                id: "Content.Layout.FlexShrink",
+                values: [],
+            },
+            "flex-basis": {
+                id: "Content.Layout.FlexBasis",
+                values: ["auto"],
+            },
+            "align-items": {
+                id: "Content.Layout.AlignItems",
+                values: ["stretch", "center", "flex-start", "flex-end", "baseline"],
+            },
+
+            // Content Style properties
+            "column-rule-width": {
+                id: "Content.Style.ColumnRuleWidth",
+                values: ["medium", "thin", "thick"],
+            },
+            "column-rule": {
+                id: "Content.Style.ColumnRule",
+                values: [],
+            },
+            "direction": {
+                id: "Content.Style.Direction",
+                values: ["ltr", "rtl"],
+            },
+            "column-rule-style": {
+                id: "Content.Style.ColumnRuleStyle",
+                values: ["none", "hidden", "dotted", "dashed", "solid", "double", "groove", "ridge", "inset", "outset"],
+            },
+            "column-rule-color": {
+                id: "Content.Style.ColumnRuleColor",
+                values: [],
+            },
+            "column-fill": {
+                id: "Content.Style.ColumnFill",
+                values: ["balance", "auto"],
+            },
+            "empty-cells": {
+                id: "Content.Style.EmptyCells",
+                values: ["show", "hide"],
+            },
+            "cursor": {
+                id: "Content.Style.Cursor",
+                values: ["alias", "all-scroll", "auto", "cell", "context-menu", "col-resize", "copy", "crosshair", "default", "e-resize", "ew-resize", "grab", "grabbing", "help", "move", "n-resize", "ne-resize", "nesw-resize", "ns-resize", "nw-resize", "nwse-resize", "no-drop", "none", "not-allowed", "pointer", "progress", "row-resize", "s-resize", "se-resize", "sw-resize", "text", "vertical-text", "w-resize", "wait", "zoom-in", "zoom-out"],
+            },
+            "padding": {
+                id: "Container.Layout.Padding",
+                values: [],
+            },
+            "padding-top": {
+                id: "Container.Layout.PaddingTop",
+                values: [],
+            },
+            "padding-right": {
+                id: "Container.Layout.PaddingRight",
+                values: [],
+            },
+            "padding-bottom": {
+                id: "Container.Layout.PaddingBottom",
+                values: [],
+            },
+            "padding-left": {
+                id: "Container.Layout.PaddingLeft",
+                values: [],
+            },
+
+            // Margin properties
+            "margin": {
+                id: "Container.Layout.Margin",
+                values: ["auto"],
+            },
+            "margin-top": {
+                id: "Container.Layout.MarginTop",
+                values: ["auto"],
+            },
+            "margin-right": {
+                id: "Container.Layout.MarginRight",
+                values: ["auto"],
+            },
+            "margin-bottom": {
+                id: "Container.Layout.MarginBottom",
+                values: ["auto"],
+            },
+            "margin-left": {
+                id: "Container.Layout.MarginLeft",
+                values: ["auto"],
+            },
+
+            // Text-related properties
+            "text-orientation": {
+                id: "Container.Style.TextOrientation",
+                values: ["mixed", "upright", "sideways"],
+            },
+            "text-underline-position": {
+                id: "Container.Style.TextUnderlinePosition",
+                values: ["auto", "under", "left", "right"],
+            },
+            "text-rendering": {
+                id: "Container.Style.TextRendering",
+                values: ["auto", "optimizeSpeed", "optimizeLegibility", "geometricPrecision"],
+            },
+            "font-kerning": {
+                id: "Container.Style.FontKerning",
+                values: ["auto", "normal", "none"],
+            },
+            "hanging-punctuation": {
+                id: "Container.Style.HangingPunctuation",
+                values: ["none", "first", "last", "force-end", "allow-end"],
+            },
+
+            // Flexbox-specific properties
+            "place-content": {
+                id: "Container.Layout.PlaceContent",
+                values: [],
+            },
+            "place-items": {
+                id: "Container.Layout.PlaceItems",
+                values: [],
+            },
+            "place-self": {
+                id: "Content.Layout.PlaceSelf",
+                values: [],
+            },
+
+            // Grid-specific properties
+            "grid-template-areas": {
+                id: "Container.Layout.GridTemplateAreas",
+                values: ["none"],
+            },
+            "grid-auto-columns": {
+                id: "Container.Layout.GridAutoColumns",
+                values: ["auto"],
+            },
+            "grid-auto-rows": {
+                id: "Container.Layout.GridAutoRows",
+                values: ["auto"],
+            },
+            "grid-auto-flow": {
+                id: "Container.Layout.GridAutoFlow",
+                values: ["row", "column", "dense", "row dense", "column dense"],
+            },
+            "grid-area": {
+                id: "Content.Layout.GridArea",
+                values: ["auto"],
+            },
+
+            // Transform-related properties
+            "transform-origin": {
+                id: "Container.Style.TransformOrigin",
+                values: [],
+            },
+            "transform-box": {
+                id: "Container.Style.TransformBox",
+                values: ["content-box", "border-box", "fill-box", "stroke-box", "view-box"],
+            },
+
+            // Miscellaneous properties
+            "aspect-ratio": {
+                id: "Container.Layout.AspectRatio",
+                values: ["auto"],
+            },
+            "scroll-snap-type": {
+                id: "Container.Layout.ScrollSnapType",
+                values: ["none", "x mandatory", "y mandatory", "block mandatory", "inline mandatory", "both mandatory"],
+            },
+            "overscroll-behavior": {
+                id: "Container.Layout.OverscrollBehavior",
+                values: ["auto", "contain", "none"],
+            },
+            "contain": {
+                id: "Container.Layout.Contain",
+                values: ["none", "strict", "content", "size", "layout", "style", "paint"],
+            },
+            "will-change": {
+                id: "Container.Style.WillChange",
+                values: ["auto"],
+            },
+            "filter": {
+                id: "Container.Style.Filter",
+                values: ["none"],
+            },
+            "mix-blend-mode": {
+                id: "Container.Style.MixBlendMode",
+                values: ["normal", "multiply", "screen", "overlay", "darken", "lighten", "color-dodge", "color-burn", "hard-light", "soft-light", "difference", "exclusion", "hue", "saturation", "color", "luminosity"],
+            },
+            "isolation": {
+                id: "Container.Style.Isolation",
+                values: ["auto", "isolate"],
+            },
+
+            // Newer CSS properties
+            "accent-color": {
+                id: "Container.Style.AccentColor",
+                values: ["auto"],
+            },
+            "content-visibility": {
+                id: "Container.Layout.ContentVisibility",
+                values: ["visible", "auto", "hidden"],
+            },
+            "scrollbar-color": {
+                id: "Container.Style.ScrollbarColor",
+                values: ["auto"],
+            },
+            "scrollbar-width": {
+                id: "Container.Style.ScrollbarWidth",
+                values: ["auto", "thin", "none"],
+            },
+
+        };
+             
+        
+        function capitalizeFirstLetter(string) {
+            return string.charAt(0).toUpperCase() + string.slice(1);
+        }
+
+        function getMethodCall(property, value) {
+            const capitalizedProperty = property.split('-').map(capitalizeFirstLetter).join('');
+            // Remove any trailing semicolons from the value
+            value = value.replace(/;$/, '').trim();
+            
+            // Escape any existing double quotes  
+            
+            // For all values, use them as quoted strings
+            return `${capitalizedProperty}("${value}")(e)`;
+        }
+
+        function cssToGoCode(css) {
+            css = css.replace(/\/\*[\s\S]*?\*\//g, '');
+            const ast = parseCSS(css);
+            const beautifiedCSS = beautifyCSS(ast);
+            let output = '';
+            let errors = [];
+            const validPseudoSelectors = ['hover', 'active', 'focus', 'visited', 'link', 'first-child', 'last-child', 'checked', 'disabled', 'enabled'];
+
+            const styleMap = new Map();
+            const ruleOrder = [];
+            const mediaQueries = [];
+
+            function addToStyleMap(selector, declarations, ruleType = 'standard', parentRule = null) {
+                const baseSelector = selector.split(':')[0];
+                const ruleId = `${ruleType}:${baseSelector}`;
+                if (!styleMap.has(ruleId)) {
+                    styleMap.set(ruleId, { base: [], pseudo: {}, type: ruleType, parentRule });
+                    ruleOrder.push(ruleId);
+                }
+                const rule = styleMap.get(ruleId);
+                const pseudoSelector = selector.includes(':') ? selector.split(':')[1] : '';
+                if (pseudoSelector && validPseudoSelectors.includes(pseudoSelector)) {
+                    if (!rule.pseudo[pseudoSelector]) {
+                        rule.pseudo[pseudoSelector] = [];
+                    }
+                    rule.pseudo[pseudoSelector].push(...declarations);
+                } else {
+                    rule.base.push(...declarations);
+                }
+            }
+
+            function processRules(rules, parentRule = null) {
+                rules.forEach(rule => {
+                    if (rule.type === 'rule') {
+                        rule.selectors.forEach(selector => {
+                            addToStyleMap(selector, rule.declarations, 'standard', parentRule);
+                        });
+                    } else if (rule.type === 'media') {
+                        mediaQueries.push(rule);
+                    } else if (rule.type === 'keyframes') {
+                        addToStyleMap(`@keyframes ${rule.name}`, [rule], 'keyframes', parentRule);
+                    }
+                });
+            }
+
+            processRules(ast.stylesheet.rules);
+
+            ruleOrder.forEach(ruleId => {
+                const [ruleType, selector] = ruleId.split(':');
+                const { base, pseudo, type, parentRule } = styleMap.get(ruleId);
+
+                if (type === 'keyframes') {
+                    const rule = base[0];
+                    const varName = generateVariableName(`@keyframes ${rule.name}`);
+                    output += `var ${varName} = \`${beautifyCSS(rule)}\`\n\n`;
+                } else if (selector.includes('>') || selector.includes(' ') || selector.includes('+') || selector.includes('~') || selector.includes('[') || parentRule) {
+                    const varName = generateVariableName(selector);
+                    output += `var ${varName} = \`\n${selector} {\n`;
+                    base.forEach(decl => {
+                        output += `\t${decl.property}: ${decl.value};\n`;
+                    });
+                    output += '}\n';
+                    Object.entries(pseudo).forEach(([pseudoSelector, declarations]) => {
+                        output += `${selector}:${pseudoSelector} {\n`;
+                        declarations.forEach(decl => {
+                            output += `\t${decl.property}: ${decl.value};\n`;
+                        });
+                        output += '}\n';
+                    });
+                    output += '\`\n\n';
+                } else if (!parentRule) {
+                    const elementName = selector.replace(/[^\w]/g, '');
+                    const funcName = `${elementName.charAt(0).toUpperCase() + elementName.slice(1)}Style`;
+                    let functionCode = `func ${funcName}(e *ui.Element) *ui.Element {\n`;
+
+                    base.forEach(decl => {
+                        const result = handleDeclaration(decl);
+                        if (result.goCode) {
+                            functionCode += result.goCode;
+                        }
+                    });
+
+                    Object.entries(pseudo).forEach(([pseudoSelector, declarations]) => {
+                        declarations.forEach(decl => {
+                            const result = handleDeclaration(decl, pseudoSelector);
+                            if (result.goCode) {
+                                functionCode += result.goCode;
+                            }
+                        });
+                    });
+
+                    functionCode += '\treturn e\n}\n';
+                    output += functionCode + '\n';
+                }
+            });
+
+            // Process media queries
+            mediaQueries.forEach((query, index) => {
+                const varName = `RawCSSMediaQuery${index + 1}`;
+                output += `var ${varName} = \`${beautifyCSS(query)}\`\n\n`;
+            });
+
+            function handleDeclaration(decl, pseudoSelector = '') {
+                const property = propertyToGoMethod(decl.property);
+                let value = decl.value;
+
+                if (cssToGoMapping[decl.property]) {
+                    let methodChain = `doc.CSS.Container`;
+                    if (pseudoSelector) {
+                        methodChain += `.${capitalizeFirstLetter(pseudoSelector)}`;
+                    }
+                    methodChain += `.Style.${capitalizeFirstLetter(property)}`;
+
+                    if (cssToGoMapping[decl.property].values.includes(value)) {
+                        // Convert hyphenated values to camelCase and capitalize
+                        value = capitalizeFirstLetter(value.replace(/-([a-z])/g, (g) => g[1].toUpperCase()));
+                        return { goCode: `\te = ${methodChain}.${value}(e)\n` };
+                    } else {
+                        return { goCode: `\te = ${methodChain}.Value("${value}")(e)\n` };
+                    }
+                } else {
+                    return { goCode: '' }; // This will be collected in rawCSSVariables
+                }
+            }
+
+
+            function generateVariableName(selector) {
+                const parts = selector.split(/\s*([>+~])\s*|\s+/).filter(Boolean);
+                let name = 'RawCSS';
+                let relationship = '';
+
+                for (let i = 0; i < parts.length; i++) {
+                    const part = parts[i];
+                    if (part === '>') {
+                        relationship = 'DirectChild';
+                    } else if (part === '+') {
+                        relationship = 'AdjacentSibling';
+                    } else if (part === '~') {
+                        relationship = 'GeneralSibling';
+                    } else {
+                        let elementName = part.replace(/[^a-zA-Z0-9]/g, '');
+                        if (elementName.length > 0) {
+                            elementName = elementName.charAt(0).toUpperCase() + elementName.slice(1);
+                            name += elementName + relationship;
+                            relationship = 'Descendant';
+                        }
+                    }
+                }
+
+                return name;
+            }
+
+            function propertyToGoMethod(property) {
+                return property.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+            }
+
+            function capitalizeFirstLetter(string) {
+                return string.charAt(0).toUpperCase() + string.slice(1);
+            }
+
+            return { 
+                beautifiedCSS, 
+                goCode: output.trim(), 
+                errors 
+            };
+        }
+        
+        function updateLOCCounter(element, content) {
+            const lineCount = content.split('\n').length;
+            element.textContent = `LOC: ${lineCount}`;
+        }
+
+        function escapeHtml(unsafe) {
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+
+        function updateLineNumbers(lineNumbersElement, contentElement) {
+            const content = contentElement.value || contentElement.textContent;
+            const lineCount = content.split('\n').length;
+            const numbers = Array(lineCount).fill().map((_, i) => `<div>${i + 1}</div>`).join('');
+            lineNumbersElement.innerHTML = numbers;
+            lineNumbersElement.style.height = `${contentElement.scrollHeight}px`;
+        }
+
+
+
+
+        function updateGoCode() {
+            if (!cssInput || typeof cssInput.value !== 'string') {
+                console.error('cssInput is not available or does not contain a string value');
+                return;
+            }
+
+            const css = cssInput.value;
+            const { goCode, errors } = cssToGoCode(css);
+
+            // Update Go output
+            if (goOutput) {
+                goOutput.textContent = goCode;
+            }
+
+            // Update line numbers and LOC counters
+            updateLineNumbers(cssLineNumbers, cssInput);
+            updateLineNumbers(goLineNumbers, goOutput);
+            updateLOCCounter(cssLOC, css);
+            updateLOCCounter(goLOC, goCode);
+
+            // Update error messages
+            updateErrorMessages(errors);
+
+            // Update highlight
+            updateHighlight();
+
+            // Sync scroll
+            syncScroll();
+        }
+
+        function updateErrorMessages(errors) {
+            if (errors.length > 0) {
+                const errorHTML = '<h3>Errors:</h3>' + errors.map(error =>
+                    `<p>Unknown CSS property: "${error.property}" in selector "${error.selector}" on line ${error.lineNumber}.</p>`
+                ).join('');
+                errorMessagesElement.innerHTML = errorHTML;
+                errorMessagesElement.style.display = 'block';
+            } else {
+                errorMessagesElement.innerHTML = '';
+                errorMessagesElement.style.display = 'none';
+            }
+        }
+
+        function updateHighlight() {
+            if (!cssInput || typeof cssInput.value !== 'string') {
+                console.error('cssInput is not available or does not contain a string value');
+                return;
+            }
+
+            const css = cssInput.value;
+            const { errors } = cssToGoCode(css);
+            const lines = css.split('\n');
+
+            const highlightedLines = lines.map((line, index) => {
+                const lineNumber = index + 1;
+                const isErrorLine = errors.some(error => error.lineNumber === lineNumber);
+                const lineContent = escapeHtml(line) || '&nbsp;'; // Use &nbsp; for empty lines
+
+                if (isErrorLine) {
+                    return `<div class="error-line" style="background-color: #ffcccc; display: block; width: 100%;">${lineContent}</div>`;
+                }
+                return `<div>${lineContent}</div>`;
+            });
+
+            if (cssHighlight) {
+                cssHighlight.innerHTML = highlightedLines.join('');
+                // Ensure highlight size matches the input size
+                cssHighlight.style.width = `${cssInput.scrollWidth}px`;
+                cssHighlight.style.height = `${cssInput.scrollHeight}px`;
+            }
+
+            // Sync scroll position
+            syncScroll();
+        }
+
+        function syncScroll() {
+            if (cssHighlight && cssInput) {
+                // Move the highlight content in the opposite direction of the scroll
+                cssHighlight.style.transform = `translate(0, ${-cssInput.scrollTop}px)`;
+
+                // Ensure the horizontal scroll is synced
+                cssHighlight.scrollLeft = cssInput.scrollLeft;
+            }
+            if (cssLineNumbers) {
+                cssLineNumbers.style.top = `-${cssInput.scrollTop}px`;
+            }
+        }
+
+
+      // Update the scroll event listener
+      cssInput.addEventListener('scroll', () => {
+          syncScroll();
+      });
+
+      // Make sure to call updateHighlight whenever the content changes
+      cssInput.addEventListener('input', () => {
+            debouncedUpdateGoCode();
+
+        });
+
+
+        copyButton.addEventListener('click', () => {
+            navigator.clipboard.writeText(goOutput.textContent).then(() => {
+                copyButton.textContent = 'Copied!';
+                setTimeout(() => {
+                    copyButton.textContent = 'Copy';
+                }, 2000);
+            });
+        });
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        const debouncedUpdateGoCode = debounce(updateGoCode, 100);
+
+        cssInput.addEventListener('paste', () => {
+            setTimeout(updateGoCode(), 0);
+        });
+
+        goOutput.addEventListener('scroll', () => {
+            document.getElementById('goLineNumbers').style.top = `-${goOutput.scrollTop}px`;
+        });
+
+        cssInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const start = this.selectionStart;
+                const end = this.selectionEnd;
+                const value = this.value;
+                if (start === end) {
+                    if (!e.shiftKey) {
+                        this.value = value.substring(0, start) + "\t" + value.substring(end);
+                        this.selectionStart = this.selectionEnd = start + 1;
+                    } else if (start > 0) {
+                        const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+                        if (value[lineStart] === '\t') {
+                            this.value = value.substring(0, lineStart) + value.substring(lineStart + 1);
+                            this.selectionStart = this.selectionEnd = start - 1;
+                        }
+                    }
+                } else {
+                    const lines = value.substring(start, end).split('\n');
+                    const indentedLines = lines.map(line =>
+                        !e.shiftKey ? '\t' + line : line.startsWith('\t') ? line.substring(1) : line
+                    );
+                    const replacement = indentedLines.join('\n');
+                    this.value = value.substring(0, start) + replacement + value.substring(end);
+                    this.selectionStart = start;
+                    this.selectionEnd = start + replacement.length;
+                }
+                updateGoCode();
+            }
+        });
+
+        // Function to save scroll positions
+        function saveScrollPositions() {
+            const scrollPositions = {
+                cssInput: cssInput.scrollTop,
+                cssHighlight: cssHighlight.scrollTop,
+                goOutput: goOutput.scrollTop,
+                cssLineNumbers: cssLineNumbers.scrollTop
+            };
+            sessionStorage.setItem('scrollPositions', JSON.stringify(scrollPositions));
+        }
+
+        // Function to restore scroll positions
+        function restoreScrollPositions() {
+            const scrollPositions = JSON.parse(sessionStorage.getItem('scrollPositions'));
+            if (scrollPositions) {
+                cssInput.scrollTop = scrollPositions.cssInput;
+                cssHighlight.scrollTop = scrollPositions.cssHighlight;
+                goOutput.scrollTop = scrollPositions.goOutput;
+                cssLineNumbers.scrollTop = scrollPositions.cssLineNumbers;
+                syncScroll(); // Ensure everything is in sync
+            }
+        }
+
+        // Save scroll positions before unload
+        window.addEventListener('beforeunload', saveScrollPositions);
+
+        // Restore scroll positions after the page has loaded
+        window.addEventListener('load', () => {
+            restoreScrollPositions();
+            // If you're loading content asynchronously, you might need to delay this
+            // setTimeout(restoreScrollPositions, 0);
+        });
+
+        function saveCssToSessionStorage() {
+            sessionStorage.setItem('cssTocontent', cssInput.value);
+        }
+
+        // Function to load CSS content from sessionStorage
+        function loadCssFromSessionStorage() {
+            const savedCss = sessionStorage.getItem('cssTocontent');
+            if (savedCss) {
+                cssInput.value = savedCss;
+                updateGoCode();
+            }
+        }
+
+        // Add event listener to save CSS content on input
+        cssInput.addEventListener('input', debounce(saveCssToSessionStorage, 500));
+
+        // Load saved CSS content on page load
+        document.addEventListener('DOMContentLoaded', loadCssFromSessionStorage);
+
+        cssInput.addEventListener('scroll', debounce(saveScrollPositions, 200));
+        goOutput.addEventListener('scroll', debounce(saveScrollPositions, 200));
+
+        // Set initial CSS content
+        document.getElementById('cssInput').value = `.container {
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: #f0f0f0;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.container:hover {
+    background-color: #e0e0e0;
+}
+
+.title {
+    font-size: 24px;
+    color: #333;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.button {
+    display: inline-block;
+    padding: 10px 20px;
+    background-color: #007bff;
+    color: white;
+    text-decoration: none;
+    border-radius: 3px;
+    transition: background-color 0.3s ease;
+}
+
+.button:hover {
+    background-color: #0056b3;
+}`;
+        const resizeObserver = new ResizeObserver(() => {
+            updateLineNumbers(goLineNumbers, goOutput);
+        });
+        resizeObserver.observe(goOutput);
+
+        updateGoCode(); // Initial conversion
+        // Initial update
+
+        /* CSS Parser 
+    (The MIT License)
+
+    Copyright (c) 2012 TJ Holowaychuk <tj@vision-media.ca>
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation 
+    files (the 'Software'), to deal in the Software without restriction, including without limitation the rights to use, 
+    copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to 
+    whom the Software is furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all copies or substantial portions of the 
+    Software.
+
+    THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED 
+    TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, 
+    TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+    SOFTWARE.
+    
+    */
+    var commentre = /\/\*[^*]*\*+([^/*][^*]*\*+)*\//g
+
+    function parseCSS(css, options){
+        options = options || {};
+
+        /**
+         * Positional.
+         */
+
+        var lineno = 1;
+        var column = 1;
+
+        /**
+         * Update lineno and column based on `str`.
+         */
+
+        function updatePosition(str) {
+            var lines = str.match(/\n/g);
+            if (lines) lineno += lines.length;
+            var i = str.lastIndexOf('\n');
+            column = ~i ? str.length - i : column + str.length;
+        }
+
+        /**
+         * Mark position and patch `node.position`.
+         */
+
+        function position() {
+            var start = { line: lineno, column: column };
+            return function(node){
+            node.position = new Position(start);
+            whitespace();
+            return node;
+            };
+        }
+
+        /**
+         * Store position information for a node
+         */
+
+        function Position(start) {
+            this.start = start;
+            this.end = { line: lineno, column: column };
+            this.source = options.source;
+        }
+
+        /**
+         * Non-enumerable source string
+         */
+
+        Position.prototype.content = css;
+
+        /**
+         * Error `msg`.
+         */
+
+        var errorsList = [];
+
+        function error(msg) {
+            var err = new Error(options.source + ':' + lineno + ':' + column + ': ' + msg);
+            err.reason = msg;
+            err.filename = options.source;
+            err.line = lineno;
+            err.column = column;
+            err.source = css;
+
+            if (options.silent) {
+                errorsList.push(err);
+            } else {
+                throw err;
+            }
+        }
+
+        /**
+         * Parse stylesheet.
+         */
+
+        function stylesheet() {
+            var rulesList = rules();
+
+            return {
+                type: 'stylesheet',
+                stylesheet: {
+                    source: options.source,
+                    rules: rulesList,
+                    parsingErrors: errorsList
+                }
+            };
+        }
+
+        /**
+         * Opening brace.
+         */
+
+        function open() {
+            return match(/^{\s*/);
+        }
+
+        /**
+         * Closing brace.
+         */
+
+        function close() {
+            return match(/^}/);
+        }
+
+        /**
+         * Parse ruleset.
+         */
+
+        function rules() {
+            var node;
+            var rules = [];
+            whitespace();
+            comments(rules);
+            while (css.length && css.charAt(0) != '}' && (node = atrule() || rule())) {
+            if (node !== false) {
+                rules.push(node);
+                comments(rules);
+            }
+            }
+            return rules;
+        }
+
+        /**
+         * Match `re` and return captures.
+         */
+
+        function match(re) {
+            var m = re.exec(css);
+            if (!m) return;
+            var str = m[0];
+            updatePosition(str);
+            css = css.slice(str.length);
+            return m;
+        }
+
+        /**
+         * Parse whitespace.
+         */
+
+        function whitespace() {
+            match(/^\s*/);
+        }
+
+        /**
+         * Parse comments;
+         */
+
+        function comments(rules) {
+            var c;
+            rules = rules || [];
+            while (c = comment()) {
+            if (c !== false) {
+                rules.push(c);
+            }
+            }
+            return rules;
+        }
+
+        /**
+         * Parse comment.
+         */
+
+        function comment() {
+            var pos = position();
+            if ('/' != css.charAt(0) || '*' != css.charAt(1)) return;
+
+            var i = 2;
+            while ("" != css.charAt(i) && ('*' != css.charAt(i) || '/' != css.charAt(i + 1))) ++i;
+            i += 2;
+
+            if ("" === css.charAt(i-1)) {
+            return error('End of comment missing');
+            }
+
+            var str = css.slice(2, i - 2);
+            column += 2;
+            updatePosition(str);
+            css = css.slice(i);
+            column += 2;
+
+            return pos({
+            type: 'comment',
+            comment: str
+            });
+        }
+
+        /**
+         * Parse selector.
+         */
+
+        function selector() {
+            var m = match(/^([^{]+)/);
+            if (!m) return;
+            /* @fix Remove all comments from selectors
+            * http://ostermiller.org/findcomment.html */
+            return trim(m[0])
+            .replace(/\/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*\/+/g, '')
+            .replace(/"(?:\\"|[^"])*"|'(?:\\'|[^'])*'/g, function(m) {
+                return m.replace(/,/g, '\u200C');
+            })
+            .split(/\s*(?![^(]*\)),\s*/)
+            .map(function(s) {
+                return s.replace(/\u200C/g, ',');
+            });
+        }
+
+        /**
+         * Parse declaration.
+         */
+
+        function declaration() {
+            var pos = position();
+
+            // prop
+            var prop = match(/^(\*?[-#\/\*\\\w]+(\[[0-9a-z_-]+\])?)\s*/);
+            if (!prop) return;
+            prop = trim(prop[0]);
+
+            // :
+            if (!match(/^:\s*/)) return error("property missing ':'");
+
+            // val
+            var val = match(/^((?:'(?:\\'|.)*?'|"(?:\\"|.)*?"|\([^\)]*?\)|[^};])+)/);
+
+            var ret = pos({
+            type: 'declaration',
+            property: prop.replace(commentre, ''),
+            value: val ? trim(val[0]).replace(commentre, '') : ''
+            });
+
+            // ;
+            match(/^[;\s]*/);
+
+            return ret;
+        }
+
+        /**
+         * Parse declarations.
+         */
+
+        function declarations() {
+            var decls = [];
+
+            if (!open()) return error("missing '{'");
+            comments(decls);
+
+            // declarations
+            var decl;
+            while (decl = declaration()) {
+            if (decl !== false) {
+                decls.push(decl);
+                comments(decls);
+            }
+            }
+
+            if (!close()) return error("missing '}'");
+            return decls;
+        }
+
+        /**
+         * Parse keyframe.
+         */
+
+        function keyframe() {
+            var m;
+            var vals = [];
+            var pos = position();
+
+            while (m = match(/^((\d+\.\d+|\.\d+|\d+)%?|[a-z]+)\s*/)) {
+            vals.push(m[1]);
+            match(/^,\s*/);
+            }
+
+            if (!vals.length) return;
+
+            return pos({
+            type: 'keyframe',
+            values: vals,
+            declarations: declarations()
+            });
+        }
+
+        /**
+         * Parse keyframes.
+         */
+
+        function atkeyframes() {
+            var pos = position();
+            var m = match(/^@([-\w]+)?keyframes\s*/);
+
+            if (!m) return;
+            var vendor = m[1];
+
+            // identifier
+            var m = match(/^([-\w]+)\s*/);
+            if (!m) return error("@keyframes missing name");
+            var name = m[1];
+
+            if (!open()) return error("@keyframes missing '{'");
+
+            var frame;
+            var frames = comments();
+            while (frame = keyframe()) {
+            frames.push(frame);
+            frames = frames.concat(comments());
+            }
+
+            if (!close()) return error("@keyframes missing '}'");
+
+            return pos({
+            type: 'keyframes',
+            name: name,
+            vendor: vendor,
+            keyframes: frames
+            });
+        }
+
+        /**
+         * Parse supports.
+         */
+
+        function atsupports() {
+            var pos = position();
+            var m = match(/^@supports *([^{]+)/);
+
+            if (!m) return;
+            var supports = trim(m[1]);
+
+            if (!open()) return error("@supports missing '{'");
+
+            var style = comments().concat(rules());
+
+            if (!close()) return error("@supports missing '}'");
+
+            return pos({
+            type: 'supports',
+            supports: supports,
+            rules: style
+            });
+        }
+
+        /**
+         * Parse host.
+         */
+
+        function athost() {
+            var pos = position();
+            var m = match(/^@host\s*/);
+
+            if (!m) return;
+
+            if (!open()) return error("@host missing '{'");
+
+            var style = comments().concat(rules());
+
+            if (!close()) return error("@host missing '}'");
+
+            return pos({
+            type: 'host',
+            rules: style
+            });
+        }
+
+        /**
+         * Parse media.
+         */
+
+        function atmedia() {
+            var pos = position();
+            var m = match(/^@media *([^{]+)/);
+
+            if (!m) return;
+            var media = trim(m[1]);
+
+            if (!open()) return error("@media missing '{'");
+
+            var style = comments().concat(rules());
+
+            if (!close()) return error("@media missing '}'");
+
+            return pos({
+            type: 'media',
+            media: media,
+            rules: style
+            });
+        }
+
+
+        /**
+         * Parse custom-media.
+         */
+
+        function atcustommedia() {
+            var pos = position();
+            var m = match(/^@custom-media\s+(--[^\s]+)\s*([^{;]+);/);
+            if (!m) return;
+
+            return pos({
+            type: 'custom-media',
+            name: trim(m[1]),
+            media: trim(m[2])
+            });
+        }
+
+        /**
+         * Parse paged media.
+         */
+
+        function atpage() {
+            var pos = position();
+            var m = match(/^@page */);
+            if (!m) return;
+
+            var sel = selector() || [];
+
+            if (!open()) return error("@page missing '{'");
+            var decls = comments();
+
+            // declarations
+            var decl;
+            while (decl = declaration()) {
+            decls.push(decl);
+            decls = decls.concat(comments());
+            }
+
+            if (!close()) return error("@page missing '}'");
+
+            return pos({
+            type: 'page',
+            selectors: sel,
+            declarations: decls
+            });
+        }
+
+        /**
+         * Parse document.
+         */
+
+        function atdocument() {
+            var pos = position();
+            var m = match(/^@([-\w]+)?document *([^{]+)/);
+            if (!m) return;
+
+            var vendor = trim(m[1]);
+            var doc = trim(m[2]);
+
+            if (!open()) return error("@document missing '{'");
+
+            var style = comments().concat(rules());
+
+            if (!close()) return error("@document missing '}'");
+
+            return pos({
+            type: 'document',
+            document: doc,
+            vendor: vendor,
+            rules: style
+            });
+        }
+
+        /**
+         * Parse font-face.
+         */
+
+        function atfontface() {
+            var pos = position();
+            var m = match(/^@font-face\s*/);
+            if (!m) return;
+
+            if (!open()) return error("@font-face missing '{'");
+            var decls = comments();
+
+            // declarations
+            var decl;
+            while (decl = declaration()) {
+            decls.push(decl);
+            decls = decls.concat(comments());
+            }
+
+            if (!close()) return error("@font-face missing '}'");
+
+            return pos({
+            type: 'font-face',
+            declarations: decls
+            });
+        }
+
+        /**
+         * Parse import
+         */
+
+        var atimport = _compileAtrule('import');
+
+        /**
+         * Parse charset
+         */
+
+        var atcharset = _compileAtrule('charset');
+
+        /**
+         * Parse namespace
+         */
+
+        var atnamespace = _compileAtrule('namespace');
+
+        /**
+         * Parse non-block at-rules
+         */
+
+
+        function _compileAtrule(name) {
+            var re = new RegExp('^@' + name + '\\s*([^;]+);');
+            return function() {
+            var pos = position();
+            var m = match(re);
+            if (!m) return;
+            var ret = { type: name };
+            ret[name] = m[1].trim();
+            return pos(ret);
+            }
+        }
+
+        /**
+         * Parse at rule.
+         */
+
+        function atrule() {
+            if (css[0] != '@') return;
+
+            return atkeyframes()
+            || atmedia()
+            || atcustommedia()
+            || atsupports()
+            || atimport()
+            || atcharset()
+            || atnamespace()
+            || atdocument()
+            || atpage()
+            || athost()
+            || atfontface();
+        }
+
+        /**
+         * Parse rule.
+         */
+
+        function rule() {
+            var pos = position();
+            var sel = selector();
+
+            if (!sel) return error('selector missing');
+            comments();
+
+            return pos({
+            type: 'rule',
+            selectors: sel,
+            declarations: declarations()
+            });
+        }
+
+        return addParent(stylesheet());
+    };
+
+    /**
+     * Trim `str`.
+     */
+
+    function trim(str) {
+        return str ? str.replace(/^\s+|\s+$/g, '') : '';
+    }
+
+    /**
+     * Adds non-enumerable parent node reference to each node.
+     */
+
+    function addParent(obj, parent) {
+        var isNode = obj && typeof obj.type === 'string';
+        var childParent = isNode ? obj : parent;
+
+        for (var k in obj) {
+            var value = obj[k];
+            if (Array.isArray(value)) {
+            value.forEach(function(v) { addParent(v, childParent); });
+            } else if (value && typeof value === 'object') {
+            addParent(value, childParent);
+            }
+        }
+
+        if (isNode) {
+            Object.defineProperty(obj, 'parent', {
+            configurable: true,
+            writable: true,
+            enumerable: false,
+            value: parent || null
+            });
+        }
+
+        return obj;
+    }
+
+    function beautifyCSS(ast, indent = '\t') {
+        function beautifyNode(node, depth = 0) {
+            const padding = indent.repeat(depth);
+            switch (node.type) {
+                case 'stylesheet':
+                    return node.stylesheet.rules.map(rule => beautifyNode(rule, depth)).join('\n\n');
+                case 'rule':
+                    return `${padding}${node.selectors.join(', ')} {\n${node.declarations.map(decl => beautifyNode(decl, depth + 1)).join('\n')}\n${padding}}`;
+                case 'declaration':
+                    return `${padding}${node.property}: ${node.value};`;
+                case 'comment':
+                    return `${padding}/*${node.comment}*/`;
+                case 'keyframes':
+                    return `${padding}@keyframes ${node.name} {\n${node.keyframes.map(kf => beautifyNode(kf, depth + 1)).join('\n')}\n${padding}}`;
+                case 'keyframe':
+                    return `${padding}${node.values.join(', ')} {\n${node.declarations.map(decl => beautifyNode(decl, depth + 1)).join('\n')}\n${padding}}`;
+                case 'media':
+                    return `${padding}@media ${node.media} {\n${node.rules.map(rule => beautifyNode(rule, depth + 1)).join('\n')}\n${padding}}`;
+                // Add more cases for other node types as needed
+                default:
+                    return '';
+            }
+        }
+
+        return beautifyNode(ast);
+    }
+
+    function generateGoCode(ast) {
+        const validPseudoSelectors = ['hover', 'active', 'focus', 'visited', 'link', 'first-child', 'last-child', 'checked', 'disabled', 'enabled'];
+        let goCode = '';
+        let rawCSS = '';
+
+        function generateForNode(node, parentSelector = '') {
+            switch (node.type) {
+                case 'stylesheet':
+                    return node.stylesheet.rules.map(rule => generateForNode(rule)).join('\n\n');
+                case 'rule':
+                    const selector = node.selectors.join(', ');
+                    const [baseSelector, pseudoSelector] = selector.split(':');
+                    const funcName = `Style${baseSelector.replace(/[^\w]/g, '')}`;
+                    let code = `func ${funcName}(e *ui.Element) *ui.Element {\n`;
+                    let unhandledCSS = '';
+
+                    node.declarations.forEach(decl => {
+                        const result = generateForDeclaration(decl, pseudoSelector);
+                        if (result.goCode) {
+                            code += result.goCode;
+                        } else {
+                            unhandledCSS += `${decl.property}: ${decl.value};\n`;
+                        }
+                    });
+
+                    if (unhandledCSS) {
+                        const varName = `rawCSS_${baseSelector.replace(/[^\w]/g, '')}`;
+                        if (pseudoSelector && validPseudoSelectors.includes(pseudoSelector)) {
+                            rawCSS += `var ${varName}_${pseudoSelector} = \`${baseSelector}:${pseudoSelector} { ${unhandledCSS} }\`\n`;
+                        } else {
+                            rawCSS += `var ${varName} = \`${selector} { ${unhandledCSS} }\`\n`;
+                        }
+                    }
+
+                    code += `\treturn e\n}`;
+                    return code;
+                case 'comment':
+                    return `// ${node.comment}`;
+                default:
+                    return '';
+            }
+        }
+
+        function generateForDeclaration(decl, pseudoSelector = '') {
+            const property = propertyToGoMethod(decl.property);
+            const value = decl.value;
+
+            if (cssToGoMapping[decl.property]) {
+                let methodChain = `doc.CSS.Container`;
+                if (pseudoSelector && validPseudoSelectors.includes(pseudoSelector)) {
+                    methodChain += `.${capitalizeFirstLetter(pseudoSelector)}`;
+                }
+                methodChain += `.Style.${property}`;
+
+                if (cssToGoMapping[decl.property].values.includes(value)) {
+                    return { goCode: `\te = ${methodChain}.${capitalizeFirstLetter(value)}(e)\n` };
+                } else {
+                    return { goCode: `\te = ${methodChain}.Value("${value}")(e)\n` };
+                }
+            } else {
+                return { goCode: '' }; // This will be collected in unhandledCSS
+            }
+        }
+
+        goCode = generateForNode(ast);
+        
+        return { goCode, rawCSS };
+    }
+
+        
+    function cssbeautify(css) {
+        const ast = parseCSS(css);
+        return beautifyCSS(ast, '\t');
+    }
+
+
+
+    function propertyToGoMethod(property) {
+        return property.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('');
+    }
+</script>
