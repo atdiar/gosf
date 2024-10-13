@@ -1274,13 +1274,16 @@
                 let value = decl.value;
 
                 if (cssToGoMapping[decl.property]) {
-                    let methodChain = `doc.CSS.Container`;
+                    const mapping = cssToGoMapping[decl.property];
+                    const [container, category] = mapping.id.split('.');
+                    
+                    let methodChain = `doc.CSS.${container}`;
                     if (pseudoSelector) {
                         methodChain += `.${capitalizeFirstLetter(pseudoSelector)}`;
                     }
-                    methodChain += `.Style.${capitalizeFirstLetter(property)}`;
+                    methodChain += `.${category}.${capitalizeFirstLetter(property)}`;
 
-                    if (cssToGoMapping[decl.property].values.includes(value)) {
+                    if (mapping.values.includes(value)) {
                         // Convert hyphenated values to camelCase and capitalize
                         value = capitalizeFirstLetter(value.replace(/-([a-z])/g, (g) => g[1].toUpperCase()));
                         return { goCode: `\te = ${methodChain}.${value}(e)\n` };
