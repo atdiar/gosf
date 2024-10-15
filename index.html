@@ -1252,10 +1252,17 @@ footer a:hover {
 
             const styleMap = new Map();
             const ruleOrder = [];
-            const mediaQueries = [];
             const rawVariables = [];
+            const mediaQueries = [];
+            const keyframes = []
 
             function addToStyleMap(selector, declarations, ruleType = 'standard', parentRule = null) {
+                if (ruleType === 'keyframes') {
+                    // Handle keyframes differently
+                    keyframes.push({ name: selector.split(' ')[1], rule: declarations[0] });
+                    return;
+                }
+
                 if (selector === ':root' || declarations.some(decl => decl.property.startsWith('--'))) {
                     rawVariables.push({ selector, declarations });
                     return;
