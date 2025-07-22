@@ -34,12 +34,12 @@ Welcome to GoSF, a helper website designed to convert your CSS into Go styling f
 ```go
 func ButtonStyle(e *ui.Element) *ui.Element {
 	e = doc.CSS.Container.Style.BackgroundColor.Value("#4CAF50")(e)
-	e = doc.CSS.Container.Style.Color.White(e)
+	e = doc.CSS.Content.Style.Color.White(e)
 	e = doc.CSS.Container.Layout.Padding.Value("15px 32px")(e)
-	e = doc.CSS.Container.Style.TextAlign.Center(e)
-	e = doc.CSS.Container.Style.TextDecoration.Value("none")(e)
+	e = doc.CSS.Content.Style.TextAlign.Center(e)
+	e = doc.CSS.Content.Style.TextDecoration.Value("none")(e)
 	e = doc.CSS.Container.Layout.Display.Value("inline-block")(e)
-	e = doc.CSS.Container.Style.FontSize.Value("16px")(e)
+	e = doc.CSS.Content.Style.FontSize.Value("16px")(e)
 	return e
 }
 ```
