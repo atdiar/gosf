@@ -1382,8 +1382,15 @@ footer a:hover {
                     methodChain += `.${category}.${capitalizeFirstLetter(property)}`;
 
                     if (mapping.values.includes(value)) {
-                        // Convert hyphenated values to camelCase and capitalize
-                        value = capitalizeFirstLetter(value.replace(/-([a-z])/g, (g) => g[1].toUpperCase()));
+                        // Special handling for font-weight numeric values
+                        if (decl.property === 'font-weight' && /^\d+$/.test(value)) {
+                            // Prepend 'S' for numeric font-weight values (e.g., 100 -> S100)
+                            value = `S${value}`;
+                        } else{
+                            // Convert hyphenated values to camelCase and capitalize
+                            value = capitalizeFirstLetter(value.replace(/-([a-z])/g, (g) => g[1].toUpperCase()));
+                        }
+                        
                         return { goCode: `\te = ${methodChain}.${value}(e)\n` };
                     } else {
                         return { goCode: `\te = ${methodChain}.Value("${value}")(e)\n` };
